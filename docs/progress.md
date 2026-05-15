@@ -32,6 +32,7 @@ This living document tracks milestones and decisions for the training portal.
 - [x] Establish mock scenario: Meridian Industrial Supply / VoltEdge
 - [x] Finalize mock product catalog (VFDs, breakers, power supplies, starters, controls)
 - [x] Write seed scenarios — 18 scenarios across all 5 modules
+- [x] Rename repo to `sales-scenario-training-portal` to remove client identifiers from public URL
 
 ### Deliverable A — Public Template
 - [x] Design Supabase schema (`scenarios` table)
@@ -56,6 +57,13 @@ This living document tracks milestones and decisions for the training portal.
 - [ ] Tag v1.0 release
 
 ## 4. Session Log
+
+### Session 3 — 2026-05-15
+- Identified that the original repo name (`eia-schneider-training-portal`) defeated the anonymization goal by embedding client identifiers directly in the public GitHub URL
+- Renamed repo to `sales-scenario-training-portal` — generic, descriptive, no client names
+- GitHub automatically redirects all existing links from the old name
+- README, progress, and build guide confirmed clean — no client names in content
+- Updated docs to record the rename decision and add a standing rule against client-identifying repo names
 
 ### Session 2 — 2026-05-15
 - Confirmed repo access: README.md and docs/ directory visible on main
