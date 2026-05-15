@@ -160,7 +160,28 @@ Retrieve the project URL and anon key from the Supabase dashboard under **Projec
 
 ---
 
-## 8. Sandbox Environment Notes
+## 8. Repo Naming — Anonymization Rule
+
+This project is built for a real client but published as a generic open-source template. The repo name is part of the public URL and is **not** covered by internal anonymization of content.
+
+### The Mistake
+The original repo name was `eia-schneider-training-portal`. Both identifiers in that name belong to the client. The mock scenario content was fully anonymized, but the URL itself disclosed the relationship.
+
+### The Rule
+> **Public repos for client work must use generic, descriptive names only.** No company names, person names, or project codenames that could identify the client. The repo name is always public, even when content is anonymized.
+
+**Good names:** `sales-scenario-training-portal`, `product-training-template`, `scenario-quiz-app`
+
+**Bad names:** `acme-corp-training`, `jane-smith-sales-tool`, `project-atlas-portal`
+
+### Rename Notes
+- Renamed to `sales-scenario-training-portal` on 2026-05-15
+- GitHub automatically redirects all links from the old name — existing bookmarks and integrations are not broken
+- No content changes were needed — the internal docs were already clean
+
+---
+
+## 9. Sandbox Environment Notes
 
 When using an AI assistant (Perplexity, ChatGPT, etc.) to generate and write files in a sandbox environment, the sandbox filesystem does **not** follow a standard Linux home directory layout.
 
@@ -179,7 +200,7 @@ Begin every file-writing session with:
 echo $HOME && pwd
 ```
 
-This confirms the actual writable directory before any `mkdir` or file-write commands. Once the path is confirmed, all file generation and `share_files` delivery will work normally.
+This confirms the actual writable directory before any `mkdir` or file-write commands. Once confirmed, all file generation and `share_files` delivery will work normally.
 
 ### Why This Matters for This Project
 
@@ -187,14 +208,15 @@ The front-end HTML for this portal will be generated in the sandbox and shared a
 
 ---
 
-## 9. For New Developers
+## 10. For New Developers
 
 - Start by reading the example scenario row in Section 3 — that is the entire data contract.
 - You can add new scenarios without touching any JavaScript by inserting rows in Supabase.
 - The front-end code never hardcodes product names — everything comes from the data.
 - The zip build is a manual step: copy the final HTML, paste in the scenario array, test offline.
 - To adapt this template for a real product line: replace the mock VoltEdge data with your own scenarios. The schema and UI require no changes.
-- Before generating files with an AI assistant, always run `echo $HOME && pwd` first (see Section 8).
+- Before generating files with an AI assistant, always run `echo $HOME && pwd` first (see Section 9).
+- When forking for a new client project, name the repo generically — never use client names in the repo name (see Section 8).
 
 ---
 
