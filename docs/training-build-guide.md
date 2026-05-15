@@ -1,167 +1,93 @@
-# Sales Scenario Training Portal — Training Build Guide
+# Sales Scenario Training Portal — Project Training Manual
 
-> This guide documents how the portal is structured, how content is seeded, and how to extend it.
-> All global Warrior X standards live in `andredavisme/warrior-x-docs/operations/training-manual.md`.
+> This manual covers what is unique to this repo.
+> All global standards live in andredavisme/warrior-x-docs/operations/training-manual.md.
 
----
+## What This Repo Is
+A browser-based sales scenario training portal for industrial electrical distribution. Sales reps work through multiple-choice scenarios covering drives, circuit breakers, power supplies, motor starters, and industrial controls. The portal is built on Supabase (Postgres + RLS) with a static HTML/CSS/JS frontend.
 
-## Section 1: Project Overview
+## Who It Serves
+Meridian Electric sales team members learning to identify, spec, and sell industrial electrical products. Designed for reps with no prior technical background.
 
-This portal teaches sales professionals to handle realistic customer scenarios for industrial electrical products. It uses a question-and-answer mechanic with instant feedback.
+## Tech Stack
+- **Database:** Supabase (Postgres)
+- **Auth:** TBD — anon key for open access or Supabase Auth for tracked progress
+- **Frontend:** Static HTML/CSS/JS (no build tools required)
+- **Hosting:** TBD — GitHub Pages or Supabase hosting
+- **Migrations:** Sequential SQL files in `supabase/migrations/`
 
-- **Mock company:** Meridian Industrial Supply
-- **Mock product line:** VoltEdge (VFDs, breakers, power supplies, starters, controls)
-- **All names are fictitious** — no real brands, no real client names anywhere in the codebase or repo URL
+## Migration Naming Convention
+`YYYYMMDD_NNN_description.sql` — never edit a migration once applied to production.
 
----
-
-## Section 2: Repository Structure
-
-```
-sales-scenario-training-portal/
-├── README.md
-├── docs/
-│   ├── progress.md          ← Session log and milestone tracker
-│   └── training-build-guide.md  ← This file
-└── supabase/
-    └── migrations/          ← TO BE CREATED (see OD-001)
-        └── YYYYMMDD_NNN_description.sql
-```
-
----
-
-## Section 3: Supabase Schema
-
-### `scenarios` table
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid | Primary key, default gen_random_uuid() |
-| `module` | text | One of: drives, breakers, power_supplies, starters, controls |
-| `prompt` | text | The customer scenario text |
-| `choices` | jsonb | Array of {label, text} objects |
-| `answer` | text | Correct answer label (e.g. "B") |
-| `explanation` | text | Why the answer is correct |
-| `difficulty` | text | easy / medium / hard |
-| `created_at` | timestamptz | Default now() |
-
-- RLS enabled with a public read-only policy
-- Index on `module` for fast filtering by training module
-
----
-
-## Section 4: Seed Content — Current State
-
-### Applied to Supabase (Session 1)
-
-18 scenarios seeded directly via Supabase MCP tool across all 5 modules:
-
-| Module | Count | Topics |
-|---|---|---|
-| `drives` | 5 | VFD selection, torque control, energy savings, enclosure ratings, fault diagnosis |
-| `breakers` | 4 | Breaker selection, crossover criteria, motor protection sizing, full panels |
-| `power_supplies` | 3 | 24VDC sizing, temperature derating, DIN-rail form factor |
-| `starters` | 3 | FVNR with overload, reversing starter, soft starter benefits |
-| `controls` | 3 | 3-wire control circuit, pilot light wiring, E-stop requirements |
-
-> ⚠️ These seeds are **not yet version-controlled** in `supabase/migrations/`. See OD-001.
-
-### Designed but not yet applied (Session 4)
-
-Module 2 extended seed — Circuit Breakers deep dive:
-
-| Lesson | Exercise 1 | Exercise 2 | Points |
-|---|---|---|---|
-| Breaker Fundamentals | AIC rating explained | Thermal-mag vs electronic trip | 10 + 10 |
-| Breaker Sizing — NEC | Motor branch circuit 250% rule | Continuous load 125% rule | 10 + 10 |
-| MCCB vs MCB vs GFCI/AFCI | 150A 480V feeder selection | Garage GFCI solution | 10 + 10 |
-| Scenario: Panel Upgrade | AIC mismatch after transformer upgrade | Continuous load upsell | 15 + 15 |
-| Scenario: Motor Branch Circuit | 25HP breaker sizing | Breaker as disconnect (NEC 430.109) | 15 + 15 |
-
-Status: **Pending OD-001 resolution before applying.**
-
----
-
-## Section 5: Open Decision — OD-001
-
-**Where do SQL seed files live?**
-
-The repo currently has no `supabase/migrations/` directory. Seeds from Session 1 were applied directly to the Supabase project and are not reproducible from the repo alone.
-
-**Options:**
-
-| Option | Approach | Trade-off |
-|---|---|---|
-| A (recommended) | Apply via MCP + push `.sql` to `supabase/migrations/` | Best practice, fully reproducible |
-| B | Supabase direct only, no SQL files in repo | Fast, but seeds lost if project is deleted |
-| C | Push SQL files, André applies manually | Good for CI/CD pipeline, more steps |
-
-**Resolve before Session 5.**
-
----
-
-## Section 6: Migration Naming Convention
-
-Follow the Warrior X standard:
-
-```
-YYYYMMDD_NNN_description.sql
+## Scenario Data Model
+```sql
+CREATE TABLE public.scenarios (
+  id          uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  module      text NOT NULL,  -- 'drives' | 'breakers' | 'power_supplies' | 'starters' | 'controls'
+  prompt      text NOT NULL,
+  choices     jsonb NOT NULL, -- [{"label": "A", "text": "..."}]
+  answer      text NOT NULL,  -- single letter: 'A' | 'B' | 'C' | 'D'
+  explanation text NOT NULL,
+  difficulty  text NOT NULL,  -- 'easy' | 'medium' | 'hard'
+  created_at  timestamptz DEFAULT now()
+);
 ```
 
-Examples:
-```
-20260515_001_create_scenarios_table.sql
-20260515_002_seed_module_drives.sql
-20260515_003_seed_module_breakers.sql
-20260515_004_seed_module_2_extended_breakers.sql
-```
+## Scenario Count (as of 2026-05-15)
+| Module | Count |
+|---|---|
+| Drives | 5 |
+| Breakers | 14 |
+| Power Supplies | 13 |
+| Starters | 13 |
+| Controls | 13 |
+| **Total** | **58** |
 
-- Never edit a migration file once it has been applied to production
-- Always include a rollback comment at the bottom (even if not automated)
+## Key Conventions
+- RLS is enabled on every table — no exceptions
+- The `anon` role may SELECT from `scenarios` (read-only public access)
+- No service role key in frontend code — ever
+- All secrets go in the Supabase Vault
+- Branch → commit → push → PR → review → merge. No direct commits to main.
 
----
+## How to Contribute
+1. Branch from main: `schema/description` for migrations, `feat/description` for frontend, `docs/description` for docs
+2. Write or update the relevant migration in `supabase/migrations/`
+3. Apply to Supabase via MCP before opening the PR
+4. Open PR with a table summarizing new content
+5. André reviews and merges
 
-## Section 7: Anonymization Rules
-
-- **Never use real client names in the repo URL, file names, or commit messages**
-- Repo name must be generic and descriptive (e.g., `sales-scenario-training-portal`)
-- All scenario content uses fictitious company names and product names
-- GitHub is public — treat every file as potentially visible to anyone
-- Real client details (if any) go in a private Supabase Vault secret only
-
----
+## Security Rules
+- 🔴 Never put client or customer names in the repo name, filenames, or commit messages — use generic names only
+- 🔴 RLS must be enabled on every table
+- 🔴 Never use the service role key in frontend code
+- 🔴 No API keys, passwords, or secrets in GitHub — Supabase Vault only
 
 ## Section 8: Sandbox Environment Notes
 
 ### Known Failure Modes
-
 | Error | Cause | Fix |
 |---|---|---|
-| `/home/user/file.html: No such file or directory` | `~` resolves to `/home/user/` which doesn't exist in this sandbox | Run `echo $HOME && pwd` first to confirm actual writable path |
-| `mkdir: cannot create directory '/root': Permission denied` | Sandbox user has no write access to `/root/` | Never use `/root/` — use the path confirmed by `pwd` |
+| `/home/user/training-portal/index.html: No such file or directory` | `~` resolves to `/home/user/` which doesn't exist in the sandbox | Run `echo $HOME && pwd` first to confirm writable path |
+| `mkdir: cannot create directory '/root': Permission denied` | Sandbox user has no write access to `/root` | Never hardcode `/root` — always confirm path with `pwd` |
 
-### Rule for Every File-Writing Session
-
-Before any `mkdir`, `cat >`, or file write command:
-
+### Rule: Always Confirm the Writable Path First
+Before any file-writing session in the sandbox, run:
 ```bash
 echo $HOME && pwd
 ```
+This confirms the actual writable directory before any `mkdir` or file creation commands.
 
-This confirms the actual writable working directory before any file generation begins.
+## Chapter 15 — Post-Mortems & Lessons Learned
 
----
+### PM-001 — Sandbox Path Resolution Failure (2026-05-15)
+**What happened:** File generation failed during initial build session. Two errors: (1) `~/training-portal/` path didn't exist because `~` resolved to a non-existent `/home/user/`; (2) retry with `/root/` was permission-denied.
+**Root cause:** Sandbox filesystem doesn't follow standard Linux home directory layout. Writable path must be confirmed before any file write operations.
+**Fix:** Start every file-writing session with `echo $HOME && pwd`.
+**Rule added:** Section 8 of this manual + Chapter 9 of warrior-x-docs training manual.
 
-## Section 9: For New Developers
-
-1. Clone the repo
-2. Create a Supabase project
-3. Apply all migrations in `supabase/migrations/` in order
-4. Copy `.env.example` to `.env` and fill in your Supabase URL and anon key
-5. Open `index.html` in a browser — no build step required
-6. Never put real client names in repo URLs, file names, or commit messages
-7. Never put API keys in code — use Supabase Vault
-
----
-
-*Last updated: 2026-05-15 15:20 EDT — Session 4: OD-001 added, Module 2 extended seed documented*
+### PM-002 — Repo Named After Client (2026-05-15)
+**What happened:** Repo was initially created as `eia-schneider-training-portal`, directly naming the client in the public GitHub URL.
+**Root cause:** No naming rule existed at time of repo creation.
+**Fix:** Renamed to `sales-scenario-training-portal`.
+**Rule added:** 🔴 Security Rule in this manual + propagated to warrior-x-docs Ch. 7, 9, 10, and 15.
