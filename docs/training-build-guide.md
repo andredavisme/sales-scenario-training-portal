@@ -1,223 +1,167 @@
-# Sales Scenario Training Portal – Build Guide
+# Sales Scenario Training Portal — Training Build Guide
 
-This guide explains how the training portal is built, step by step. It is written for developers who want to understand, fork, or extend the project.
-
----
-
-## 1. Concept Overview
-
-**The mock scenario:** Meridian Industrial Supply is a fictitious industrial distributor whose sales reps need to quickly learn a new product line — VoltEdge (VFDs, breakers, power supplies, starters, and controls). This mock scenario mirrors a real and common sales enablement challenge without exposing any proprietary data. All product names, company names, and catalog numbers are fictitious. All technical concepts use generalized industry terminology.
-
-**The mechanic:**
-- A customer situation is described (e.g., "A customer needs a 5HP drive for a 460V conveyor application").
-- The rep picks the best answer from 3–4 choices.
-- Instant feedback explains why the answer is correct or incorrect.
-- Reps build pattern recognition across product categories without needing deep technical knowledge.
+> This guide documents how the portal is structured, how content is seeded, and how to extend it.
+> All global Warrior X standards live in `andredavisme/warrior-x-docs/operations/training-manual.md`.
 
 ---
 
-## 2. Architecture
+## Section 1: Project Overview
 
-### Deliverable A — Public Educational Template
+This portal teaches sales professionals to handle realistic customer scenarios for industrial electrical products. It uses a question-and-answer mechanic with instant feedback.
 
-```
-Browser (GitHub Pages)
-    └── Static HTML/CSS/JS
-            └── Supabase JS client
-                    └── Supabase (Postgres)
-                            └── scenarios table
-```
-
-- Front end: Static site hosted on GitHub Pages.
-- Back end: Supabase project (free tier is sufficient).
-- Scenarios are rows in a Postgres table, fetched at runtime via the Supabase JS client.
-- No build tool required — vanilla JS with a CDN-loaded Supabase client.
-
-### Deliverable B — Internal Handoff Zip
-
-```
-index.html
-    └── <script> with embedded scenarioData = [ ... ]
-```
-
-- No server, no CDN, no internet connection required.
-- All scenario data is a plain JS array embedded directly in the HTML file.
-- Opens in any modern browser from the local filesystem.
-- Ideal for distribution via email or shared drive.
+- **Mock company:** Meridian Industrial Supply
+- **Mock product line:** VoltEdge (VFDs, breakers, power supplies, starters, controls)
+- **All names are fictitious** — no real brands, no real client names anywhere in the codebase or repo URL
 
 ---
 
-## 3. Data Model
+## Section 2: Repository Structure
 
-### Schema (applied to Supabase)
+```
+sales-scenario-training-portal/
+├── README.md
+├── docs/
+│   ├── progress.md          ← Session log and milestone tracker
+│   └── training-build-guide.md  ← This file
+└── supabase/
+    └── migrations/          ← TO BE CREATED (see OD-001)
+        └── YYYYMMDD_NNN_description.sql
+```
 
-The `scenarios` table lives in the `public` schema with RLS enabled and a public read-only policy.
+---
 
-| Field | Type | Description |
+## Section 3: Supabase Schema
+
+### `scenarios` table
+
+| Column | Type | Notes |
 |---|---|---|
-| `id` | serial PK | Auto-incremented primary key |
-| `module` | text | Product category: `drives`, `breakers`, `power_supplies`, `starters`, `controls` |
-| `prompt` | text | The customer situation described to the rep |
-| `choices` | jsonb | Array of `{ label, text }` objects (A, B, C, D) |
-| `answer` | text | The correct choice label (e.g., `"B"`) |
-| `explanation` | text | Why that answer is correct (and why others are not) |
-| `difficulty` | text | `easy`, `medium`, or `hard` |
-| `created_at` | timestamptz | Auto-set on insert |
+| `id` | uuid | Primary key, default gen_random_uuid() |
+| `module` | text | One of: drives, breakers, power_supplies, starters, controls |
+| `prompt` | text | The customer scenario text |
+| `choices` | jsonb | Array of {label, text} objects |
+| `answer` | text | Correct answer label (e.g. "B") |
+| `explanation` | text | Why the answer is correct |
+| `difficulty` | text | easy / medium / hard |
+| `created_at` | timestamptz | Default now() |
 
-### Example Row
-
-```json
-{
-  "module": "drives",
-  "prompt": "A customer needs a variable frequency drive for a 5HP, 460V, 3-phase conveyor motor. Which VoltEdge VFD is the correct fit?",
-  "choices": [
-    { "label": "A", "text": "VE-VFD-2HP-230V" },
-    { "label": "B", "text": "VE-VFD-5HP-460V" },
-    { "label": "C", "text": "VE-VFD-10HP-460V" },
-    { "label": "D", "text": "VE-STARTER-5HP-460V" }
-  ],
-  "answer": "B",
-  "explanation": "Match HP and voltage exactly. The VE-VFD-5HP-460V fits the application. Option C is oversized. Option D is a soft starter, not a VFD — it cannot vary motor speed.",
-  "difficulty": "easy"
-}
-```
+- RLS enabled with a public read-only policy
+- Index on `module` for fast filtering by training module
 
 ---
 
-## 4. Seeded Content Summary
+## Section 4: Seed Content — Current State
 
-18 mock scenarios are seeded across all 5 modules. All content uses fictitious VoltEdge product names and generalized industry terminology.
+### Applied to Supabase (Session 1)
 
-| Module | Count | Topics Covered |
+18 scenarios seeded directly via Supabase MCP tool across all 5 modules:
+
+| Module | Count | Topics |
 |---|---|---|
-| `drives` | 5 | VFD sizing, torque control types, energy savings mode, enclosure ratings, overcurrent fault diagnosis |
-| `breakers` | 4 | Breaker selection, competitor crossover criteria, motor branch circuit sizing (250% rule), full panels |
-| `power_supplies` | 3 | 24VDC sizing with margin, temperature derating, DIN-rail form factor |
-| `starters` | 3 | FVNR with overload relay, reversing starter configuration, soft starter benefits |
-| `controls` | 3 | 3-wire control circuit wiring, pilot light connection, E-stop contact requirements |
+| `drives` | 5 | VFD selection, torque control, energy savings, enclosure ratings, fault diagnosis |
+| `breakers` | 4 | Breaker selection, crossover criteria, motor protection sizing, full panels |
+| `power_supplies` | 3 | 24VDC sizing, temperature derating, DIN-rail form factor |
+| `starters` | 3 | FVNR with overload, reversing starter, soft starter benefits |
+| `controls` | 3 | 3-wire control circuit, pilot light wiring, E-stop requirements |
+
+> ⚠️ These seeds are **not yet version-controlled** in `supabase/migrations/`. See OD-001.
+
+### Designed but not yet applied (Session 4)
+
+Module 2 extended seed — Circuit Breakers deep dive:
+
+| Lesson | Exercise 1 | Exercise 2 | Points |
+|---|---|---|---|
+| Breaker Fundamentals | AIC rating explained | Thermal-mag vs electronic trip | 10 + 10 |
+| Breaker Sizing — NEC | Motor branch circuit 250% rule | Continuous load 125% rule | 10 + 10 |
+| MCCB vs MCB vs GFCI/AFCI | 150A 480V feeder selection | Garage GFCI solution | 10 + 10 |
+| Scenario: Panel Upgrade | AIC mismatch after transformer upgrade | Continuous load upsell | 15 + 15 |
+| Scenario: Motor Branch Circuit | 25HP breaker sizing | Breaker as disconnect (NEC 430.109) | 15 + 15 |
+
+Status: **Pending OD-001 resolution before applying.**
 
 ---
 
-## 5. UI Components
+## Section 5: Open Decision — OD-001
 
-### Module Picker
-- Displays a card or button for each product category.
-- Clicking a module loads scenarios for that category from Supabase (or embedded data in zip build).
+**Where do SQL seed files live?**
 
-### Scenario Player
-- Shows the prompt and answer choices.
-- On selection: highlights correct/incorrect, shows explanation.
-- "Next" button advances to the next scenario.
-- Progress indicator shows position within the module.
+The repo currently has no `supabase/migrations/` directory. Seeds from Session 1 were applied directly to the Supabase project and are not reproducible from the repo alone.
 
-### Score Summary (optional)
-- At the end of a module, shows total correct / total attempted.
-- Encourages retry.
+**Options:**
 
----
+| Option | Approach | Trade-off |
+|---|---|---|
+| A (recommended) | Apply via MCP + push `.sql` to `supabase/migrations/` | Best practice, fully reproducible |
+| B | Supabase direct only, no SQL files in repo | Fast, but seeds lost if project is deleted |
+| C | Push SQL files, André applies manually | Good for CI/CD pipeline, more steps |
 
-## 6. Build Order
-
-1. **Schema** ✅ — `scenarios` table created in Supabase with RLS and public read policy.
-2. **Seed data** ✅ — 18 scenarios across all 5 modules inserted.
-3. **Scenario player** — Build the core UI loop (prompt → choices → feedback → next).
-4. **Module picker** — Build the entry screen.
-5. **Supabase wiring** — Connect the Supabase JS client (CDN) to fetch scenarios by module.
-6. **GitHub Pages deploy** — Enable Pages on `main`; verify live URL.
-7. **Zip build** — Copy the final HTML, replace Supabase fetch with embedded JS array, test offline.
-8. **Release** — Package zip, attach to GitHub Release, tag v1.0.
+**Resolve before Session 5.**
 
 ---
 
-## 7. Supabase Connection (for front-end wiring)
+## Section 6: Migration Naming Convention
 
-The Supabase project is `andredavisme's Project` in region `us-west-2`.
+Follow the Warrior X standard:
 
-To connect from the front end:
-
-```html
-<!-- Load Supabase JS client from CDN -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-  const { createClient } = supabase;
-  const client = createClient(
-    'YOUR_SUPABASE_PROJECT_URL',
-    'YOUR_SUPABASE_ANON_KEY'
-  );
-
-  async function loadScenarios(module) {
-    const { data, error } = await client
-      .from('scenarios')
-      .select('*')
-      .eq('module', module)
-      .order('difficulty');
-    return data;
-  }
-</script>
+```
+YYYYMMDD_NNN_description.sql
 ```
 
-Retrieve the project URL and anon key from the Supabase dashboard under **Project Settings → API**.
+Examples:
+```
+20260515_001_create_scenarios_table.sql
+20260515_002_seed_module_drives.sql
+20260515_003_seed_module_breakers.sql
+20260515_004_seed_module_2_extended_breakers.sql
+```
+
+- Never edit a migration file once it has been applied to production
+- Always include a rollback comment at the bottom (even if not automated)
 
 ---
 
-## 8. Repo Naming — Anonymization Rule
+## Section 7: Anonymization Rules
 
-This project is built for a real client but published as a generic open-source template. The repo name is part of the public URL and is **not** covered by internal anonymization of content.
-
-### The Mistake
-The original repo name was `eia-schneider-training-portal`. Both identifiers in that name belong to the client. The mock scenario content was fully anonymized, but the URL itself disclosed the relationship.
-
-### The Rule
-> **Public repos for client work must use generic, descriptive names only.** No company names, person names, or project codenames that could identify the client. The repo name is always public, even when content is anonymized.
-
-**Good names:** `sales-scenario-training-portal`, `product-training-template`, `scenario-quiz-app`
-
-**Bad names:** `acme-corp-training`, `jane-smith-sales-tool`, `project-atlas-portal`
-
-### Rename Notes
-- Renamed to `sales-scenario-training-portal` on 2026-05-15
-- GitHub automatically redirects all links from the old name — existing bookmarks and integrations are not broken
-- No content changes were needed — the internal docs were already clean
+- **Never use real client names in the repo URL, file names, or commit messages**
+- Repo name must be generic and descriptive (e.g., `sales-scenario-training-portal`)
+- All scenario content uses fictitious company names and product names
+- GitHub is public — treat every file as potentially visible to anyone
+- Real client details (if any) go in a private Supabase Vault secret only
 
 ---
 
-## 9. Sandbox Environment Notes
-
-When using an AI assistant (Perplexity, ChatGPT, etc.) to generate and write files in a sandbox environment, the sandbox filesystem does **not** follow a standard Linux home directory layout.
+## Section 8: Sandbox Environment Notes
 
 ### Known Failure Modes
 
-| Error | Cause |
-|---|---|
-| `/bin/bash: /home/user/...: No such file or directory` | `~` resolves to `/home/user/` — a path that doesn't exist in the sandbox |
-| `mkdir: cannot create directory '/root': Permission denied` | The sandbox user has no write access to `/root/` |
+| Error | Cause | Fix |
+|---|---|---|
+| `/home/user/file.html: No such file or directory` | `~` resolves to `/home/user/` which doesn't exist in this sandbox | Run `echo $HOME && pwd` first to confirm actual writable path |
+| `mkdir: cannot create directory '/root': Permission denied` | Sandbox user has no write access to `/root/` | Never use `/root/` — use the path confirmed by `pwd` |
 
-### Fix — Confirm the Path First
+### Rule for Every File-Writing Session
 
-Begin every file-writing session with:
+Before any `mkdir`, `cat >`, or file write command:
 
 ```bash
 echo $HOME && pwd
 ```
 
-This confirms the actual writable directory before any `mkdir` or file-write commands. Once confirmed, all file generation and `share_files` delivery will work normally.
-
-### Why This Matters for This Project
-
-The front-end HTML for this portal will be generated in the sandbox and shared as a downloadable file. If the sandbox path is assumed rather than confirmed, the file generation step fails silently and the session must be restarted.
+This confirms the actual writable working directory before any file generation begins.
 
 ---
 
-## 10. For New Developers
+## Section 9: For New Developers
 
-- Start by reading the example scenario row in Section 3 — that is the entire data contract.
-- You can add new scenarios without touching any JavaScript by inserting rows in Supabase.
-- The front-end code never hardcodes product names — everything comes from the data.
-- The zip build is a manual step: copy the final HTML, paste in the scenario array, test offline.
-- To adapt this template for a real product line: replace the mock VoltEdge data with your own scenarios. The schema and UI require no changes.
-- Before generating files with an AI assistant, always run `echo $HOME && pwd` first (see Section 9).
-- When forking for a new client project, name the repo generically — never use client names in the repo name (see Section 8).
+1. Clone the repo
+2. Create a Supabase project
+3. Apply all migrations in `supabase/migrations/` in order
+4. Copy `.env.example` to `.env` and fill in your Supabase URL and anon key
+5. Open `index.html` in a browser — no build step required
+6. Never put real client names in repo URLs, file names, or commit messages
+7. Never put API keys in code — use Supabase Vault
 
 ---
 
-*As you work through the build, update this guide with what you learn. It should always reflect the current state of the project.*
+*Last updated: 2026-05-15 15:20 EDT — Session 4: OD-001 added, Module 2 extended seed documented*

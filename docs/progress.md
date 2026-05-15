@@ -33,11 +33,13 @@ This living document tracks milestones and decisions for the training portal.
 - [x] Finalize mock product catalog (VFDs, breakers, power supplies, starters, controls)
 - [x] Write seed scenarios — 18 scenarios across all 5 modules
 - [x] Rename repo to `sales-scenario-training-portal` to remove client identifiers from public URL
+- [ ] **OPEN DECISION: Decide where SQL seed files live** (Supabase direct vs. `supabase/migrations/` in repo)
 
 ### Deliverable A — Public Template
 - [x] Design Supabase schema (`scenarios` table)
 - [x] Apply migration to Supabase project
 - [x] Seed mock data (18 scenarios, all modules)
+- [ ] Create `supabase/migrations/` directory and version-control all seed SQL
 - [ ] Build module picker UI (GitHub Pages)
 - [ ] Build scenario player with instant feedback
 - [ ] Wire Supabase client to front-end
@@ -56,7 +58,29 @@ This living document tracks milestones and decisions for the training portal.
 - [ ] Iterate on content and UX
 - [ ] Tag v1.0 release
 
-## 4. Session Log
+## 4. Open Decisions
+
+### OD-001 — Where do SQL seed files live?
+**Raised:** 2026-05-15 Session 4
+
+The repo has no `supabase/migrations/` directory. Seeds applied to date (18 scenarios across 5 modules) were run directly via Supabase MCP tool and are not version-controlled in the repo. Module 2 extended seed content (5 lessons / 10 exercises / 40 options for circuit breakers) is designed but not yet applied or committed.
+
+**Options:**
+- **A — Supabase direct + push SQL to repo:** Apply via MCP tool AND push `.sql` files to `supabase/migrations/` for version control. Best practice.
+- **B — Supabase direct only:** No SQL files in repo. Faster but seeds are not reproducible without the Supabase project.
+- **C — Repo only:** Push SQL files, André applies manually. Useful if CI/CD migration runner is planned.
+
+**Recommendation:** Option A. Resolve before Session 5.
+
+## 5. Session Log
+
+### Session 4 — 2026-05-15
+- Designed Module 2 extended seed (circuit breakers): 5 lessons, 10 exercises, 40 answer options
+  - Breaker Fundamentals, Breaker Sizing (NEC), MCCB vs MCB vs GFCI/AFCI, Scenario: Panel Upgrade, Scenario: Motor Branch Circuit
+  - Point values: standard exercises 10pts each, scenario exercises 15pts each
+- Discovered repo has no `supabase/migrations/` directory — seeds from Session 1 applied directly via Supabase MCP, not version-controlled
+- Raised OD-001: seed location decision needed before Session 5
+- No files committed to repo this session — pending OD-001 resolution
 
 ### Session 3 — 2026-05-15
 - Identified that the original repo name (`eia-schneider-training-portal`) defeated the anonymization goal by embedding client identifiers directly in the public GitHub URL
@@ -74,12 +98,6 @@ This living document tracks milestones and decisions for the training portal.
 - No code changes this session — diagnosis and documentation only
 - Updated `docs/progress.md` and `docs/training-build-guide.md` with sandbox environment notes
 
-### Next Session — Recommended Starting Point
-- Build the GitHub Pages front-end: module picker UI + scenario player
-- Start with `echo $HOME && pwd` to confirm sandbox path before any file writes
-- Supabase project: `hhyhulqngdkwsxhymmcd` (us-west-2)
-- Anon key and project URL needed from Supabase dashboard for JS client wiring
-
 ### Session 1 — 2026-05-15
 - Reframed project as dual-deliverable: public educational template + internal handoff zip
 - Established fictitious mock scenario (Meridian Industrial Supply / VoltEdge) — no real brand names, generalized industry terminology throughout
@@ -89,12 +107,12 @@ This living document tracks milestones and decisions for the training portal.
   - RLS enabled with public read-only policy
   - Index on `module` for fast filtering
 - Seeded 18 mock scenarios across all 5 modules:
-  - `drives` — 5 scenarios (VFD selection, torque control, energy savings, enclosure ratings, fault diagnosis)
-  - `breakers` — 4 scenarios (breaker selection, crossover criteria, motor protection sizing, full panels)
-  - `power_supplies` — 3 scenarios (24VDC sizing, temperature derating, DIN-rail form factor)
-  - `starters` — 3 scenarios (FVNR with overload, reversing starter, soft starter benefits)
-  - `controls` — 3 scenarios (3-wire control circuit, pilot light wiring, E-stop requirements)
+  - `drives` — 5 scenarios
+  - `breakers` — 4 scenarios
+  - `power_supplies` — 3 scenarios
+  - `starters` — 3 scenarios
+  - `controls` — 3 scenarios
 
 ---
 
-This file is intentionally lightweight so it can be updated frequently as the project evolves.
+*Last updated: 2026-05-15 15:20 EDT — Session 4: Module 2 extended seed designed, OD-001 seed location decision pending*
