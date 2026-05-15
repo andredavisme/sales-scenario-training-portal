@@ -160,13 +160,41 @@ Retrieve the project URL and anon key from the Supabase dashboard under **Projec
 
 ---
 
-## 8. For New Developers
+## 8. Sandbox Environment Notes
+
+When using an AI assistant (Perplexity, ChatGPT, etc.) to generate and write files in a sandbox environment, the sandbox filesystem does **not** follow a standard Linux home directory layout.
+
+### Known Failure Modes
+
+| Error | Cause |
+|---|---|
+| `/bin/bash: /home/user/...: No such file or directory` | `~` resolves to `/home/user/` — a path that doesn't exist in the sandbox |
+| `mkdir: cannot create directory '/root': Permission denied` | The sandbox user has no write access to `/root/` |
+
+### Fix — Confirm the Path First
+
+Begin every file-writing session with:
+
+```bash
+echo $HOME && pwd
+```
+
+This confirms the actual writable directory before any `mkdir` or file-write commands. Once the path is confirmed, all file generation and `share_files` delivery will work normally.
+
+### Why This Matters for This Project
+
+The front-end HTML for this portal will be generated in the sandbox and shared as a downloadable file. If the sandbox path is assumed rather than confirmed, the file generation step fails silently and the session must be restarted.
+
+---
+
+## 9. For New Developers
 
 - Start by reading the example scenario row in Section 3 — that is the entire data contract.
 - You can add new scenarios without touching any JavaScript by inserting rows in Supabase.
 - The front-end code never hardcodes product names — everything comes from the data.
 - The zip build is a manual step: copy the final HTML, paste in the scenario array, test offline.
 - To adapt this template for a real product line: replace the mock VoltEdge data with your own scenarios. The schema and UI require no changes.
+- Before generating files with an AI assistant, always run `echo $HOME && pwd` first (see Section 8).
 
 ---
 

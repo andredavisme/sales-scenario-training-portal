@@ -57,6 +57,21 @@ This living document tracks milestones and decisions for the training portal.
 
 ## 4. Session Log
 
+### Session 2 — 2026-05-15
+- Confirmed repo access: README.md and docs/ directory visible on main
+- Diagnosed sandbox filesystem errors that blocked file generation in previous session:
+  - `~` resolved to `/home/user/` — a path that does not exist in the AI sandbox environment
+  - `/root/` is permission-denied in the sandbox
+  - Fix: begin every file-writing session with `echo $HOME && pwd` to confirm the actual writable path
+- No code changes this session — diagnosis and documentation only
+- Updated `docs/progress.md` and `docs/training-build-guide.md` with sandbox environment notes
+
+### Next Session — Recommended Starting Point
+- Build the GitHub Pages front-end: module picker UI + scenario player
+- Start with `echo $HOME && pwd` to confirm sandbox path before any file writes
+- Supabase project: `hhyhulqngdkwsxhymmcd` (us-west-2)
+- Anon key and project URL needed from Supabase dashboard for JS client wiring
+
 ### Session 1 — 2026-05-15
 - Reframed project as dual-deliverable: public educational template + internal handoff zip
 - Established fictitious mock scenario (Meridian Industrial Supply / VoltEdge) — no real brand names, generalized industry terminology throughout
@@ -71,11 +86,6 @@ This living document tracks milestones and decisions for the training portal.
   - `power_supplies` — 3 scenarios (24VDC sizing, temperature derating, DIN-rail form factor)
   - `starters` — 3 scenarios (FVNR with overload, reversing starter, soft starter benefits)
   - `controls` — 3 scenarios (3-wire control circuit, pilot light wiring, E-stop requirements)
-
-### Next Session — Recommended Starting Point
-- Build the GitHub Pages front-end: module picker UI + scenario player
-- Supabase project: `hhyhulqngdkwsxhymmcd` (us-west-2)
-- Anon key and project URL needed from Supabase dashboard for JS client wiring
 
 ---
 
