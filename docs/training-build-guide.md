@@ -11,10 +11,24 @@ Meridian Electric sales team members learning to identify, spec, and sell indust
 
 ## Tech Stack
 - **Database:** Supabase (Postgres)
-- **Auth:** TBD — anon key for open access or Supabase Auth for tracked progress
+- **Auth:** Open access via anon key — no login required
 - **Frontend:** Static HTML/CSS/JS (no build tools required)
 - **Hosting:** TBD — GitHub Pages or Supabase hosting
 - **Migrations:** Sequential SQL files in `supabase/migrations/`
+
+## Auth & Access Model
+
+### Decision: Open Access (Confirmed 2026-05-15)
+This portal uses **anonymous (anon) read-only access**. No login, no accounts, no session tracking required.
+
+- The `anon` role has SELECT permission on `scenarios` only
+- No writes from the frontend — ever
+- No Supabase Auth integration needed
+- Reps open the portal and go — zero friction
+
+**Why:** The goal is fast, frictionless learning. A login wall kills momentum before a rep has even seen a question. Progress tracking can be added later if needed; it should never be a prerequisite to launch.
+
+> 🔒 Even with open access, RLS is still enabled on every table. The anon policy is explicit and intentional — not a default or an oversight.
 
 ## Migration Naming Convention
 `YYYYMMDD_NNN_description.sql` — never edit a migration once applied to production.
@@ -43,6 +57,36 @@ CREATE TABLE public.scenarios (
 | Controls | 13 |
 | **Total** | **58** |
 
+## UX Voice & Personality
+
+### Rule: This Portal Has Energy
+The training experience should feel alive, not corporate. Reps are learning hard technical content — the portal's job is to make that feel like a challenge worth taking on, not a compliance checkbox.
+
+**Tone principles:**
+- **Direct.** Short sentences. No filler words. No "Please select the best answer from the options below."
+- **Encouraging without being sappy.** "Nice — that's the one" beats "Correct! Great job!"
+- **A little edge.** It's okay to be slightly irreverent. These are sales reps, not kindergarteners.
+- **Fresh every session.** The portal should never feel like it's reading from a script. Vary feedback text, vary encouragement, keep it feeling spontaneous.
+
+**Examples of voice done right:**
+- ✅ "Yep. The VFD limits inrush — that's the play."
+- ✅ "Nope. Think about what's upstream of the motor."
+- ✅ "2 for 2. Let's keep it moving."
+- ✅ "Tough one. Here's why B is the right call:"
+
+**Examples of voice done wrong:**
+- ❌ "Congratulations! You answered correctly! Keep up the great work!"
+- ❌ "I'm sorry, that answer is incorrect. The correct answer is B."
+- ❌ "Welcome to the Sales Scenario Training Portal. Please select a module to begin."
+
+### Rule: Fresh Each Session
+The portal loads fresh every time — no cookies, no stored progress, no "welcome back" state. This is a feature, not a limitation.
+
+- The opening screen should feel like kicking off something, not resuming something
+- Module selection is always the first step — never auto-resume
+- Score resets on reload — reps retake modules to sharpen, not to "complete"
+- If a streak or score counter exists in the UI, it resets per session with no apology
+
 ## Key Conventions
 - RLS is enabled on every table — no exceptions
 - The `anon` role may SELECT from `scenarios` (read-only public access)
@@ -59,7 +103,7 @@ CREATE TABLE public.scenarios (
 
 ## Security Rules
 - 🔴 Never put client or customer names in the repo name, filenames, or commit messages — use generic names only
-- 🔴 RLS must be enabled on every table
+- 🔴 RLS must be enabled on every table — even tables with open anon access
 - 🔴 Never use the service role key in frontend code
 - 🔴 No API keys, passwords, or secrets in GitHub — Supabase Vault only
 
