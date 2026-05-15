@@ -6,7 +6,7 @@ This guide explains how the training portal is built, step by step. It is writte
 
 ## 1. Concept Overview
 
-**The mock scenario:** Meridian Industrial Supply is a fictitious industrial distributor whose sales reps need to quickly learn a new product line — VoltEdge (VFDs, breakers, power supplies, starters, and controls). This mock scenario mirrors a real and common sales enablement challenge without exposing any proprietary data.
+**The mock scenario:** Meridian Industrial Supply is a fictitious industrial distributor whose sales reps need to quickly learn a new product line — VoltEdge (VFDs, breakers, power supplies, starters, and controls). This mock scenario mirrors a real and common sales enablement challenge without exposing any proprietary data. All product names, company names, and catalog numbers are fictitious. All technical concepts use generalized industry terminology.
 
 **The mechanic:**
 - A customer situation is described (e.g., "A customer needs a 5HP drive for a 460V conveyor application").
@@ -49,49 +49,66 @@ index.html
 
 ## 3. Data Model
 
-Each scenario is one record with these fields:
+### Schema (applied to Supabase)
+
+The `scenarios` table lives in the `public` schema with RLS enabled and a public read-only policy.
 
 | Field | Type | Description |
 |---|---|---|
-| `id` | integer | Auto-incremented primary key |
-| `module` | text | Product category (e.g., `drives`, `breakers`) |
+| `id` | serial PK | Auto-incremented primary key |
+| `module` | text | Product category: `drives`, `breakers`, `power_supplies`, `starters`, `controls` |
 | `prompt` | text | The customer situation described to the rep |
 | `choices` | jsonb | Array of `{ label, text }` objects (A, B, C, D) |
 | `answer` | text | The correct choice label (e.g., `"B"`) |
-| `explanation` | text | Why that answer is correct |
+| `explanation` | text | Why that answer is correct (and why others are not) |
 | `difficulty` | text | `easy`, `medium`, or `hard` |
+| `created_at` | timestamptz | Auto-set on insert |
 
 ### Example Row
 
 ```json
 {
   "module": "drives",
-  "prompt": "A customer needs a drive for a 5HP, 460V, 3-phase conveyor motor. Which VoltEdge VFD is the right fit?",
+  "prompt": "A customer needs a variable frequency drive for a 5HP, 460V, 3-phase conveyor motor. Which VoltEdge VFD is the correct fit?",
   "choices": [
     { "label": "A", "text": "VE-VFD-2HP-230V" },
     { "label": "B", "text": "VE-VFD-5HP-460V" },
     { "label": "C", "text": "VE-VFD-10HP-460V" },
-    { "label": "D", "text": "VE-STARTER-5HP" }
+    { "label": "D", "text": "VE-STARTER-5HP-460V" }
   ],
   "answer": "B",
-  "explanation": "Match HP and voltage exactly. The VE-VFD-5HP-460V is the correct fit. Option C is oversized. Option D is a starter, not a VFD.",
+  "explanation": "Match HP and voltage exactly. The VE-VFD-5HP-460V fits the application. Option C is oversized. Option D is a soft starter, not a VFD — it cannot vary motor speed.",
   "difficulty": "easy"
 }
 ```
 
 ---
 
-## 4. UI Components
+## 4. Seeded Content Summary
+
+18 mock scenarios are seeded across all 5 modules. All content uses fictitious VoltEdge product names and generalized industry terminology.
+
+| Module | Count | Topics Covered |
+|---|---|---|
+| `drives` | 5 | VFD sizing, torque control types, energy savings mode, enclosure ratings, overcurrent fault diagnosis |
+| `breakers` | 4 | Breaker selection, competitor crossover criteria, motor branch circuit sizing (250% rule), full panels |
+| `power_supplies` | 3 | 24VDC sizing with margin, temperature derating, DIN-rail form factor |
+| `starters` | 3 | FVNR with overload relay, reversing starter configuration, soft starter benefits |
+| `controls` | 3 | 3-wire control circuit wiring, pilot light connection, E-stop contact requirements |
+
+---
+
+## 5. UI Components
 
 ### Module Picker
 - Displays a card or button for each product category.
-- Clicking a module loads scenarios for that category.
+- Clicking a module loads scenarios for that category from Supabase (or embedded data in zip build).
 
 ### Scenario Player
-- Shows the prompt and four answer choices.
+- Shows the prompt and answer choices.
 - On selection: highlights correct/incorrect, shows explanation.
 - "Next" button advances to the next scenario.
-- Progress indicator shows how many scenarios remain.
+- Progress indicator shows position within the module.
 
 ### Score Summary (optional)
 - At the end of a module, shows total correct / total attempted.
@@ -99,30 +116,57 @@ Each scenario is one record with these fields:
 
 ---
 
-## 5. Build Order
+## 6. Build Order
 
-1. **Schema** — define and apply the `scenarios` table in Supabase.
-2. **Seed data** — write 5–10 scenarios per module in the mock VoltEdge catalog.
-3. **Scenario player** — build the core UI loop (prompt → choices → feedback → next).
-4. **Module picker** — build the entry screen.
-5. **Supabase wiring** — connect the JS client to fetch scenarios by module.
-6. **Zip build** — copy the same UI, replace Supabase fetch with embedded JS array.
-7. **Deploy** — enable GitHub Pages; package zip and attach to Release.
+1. **Schema** ✅ — `scenarios` table created in Supabase with RLS and public read policy.
+2. **Seed data** ✅ — 18 scenarios across all 5 modules inserted.
+3. **Scenario player** — Build the core UI loop (prompt → choices → feedback → next).
+4. **Module picker** — Build the entry screen.
+5. **Supabase wiring** — Connect the Supabase JS client (CDN) to fetch scenarios by module.
+6. **GitHub Pages deploy** — Enable Pages on `main`; verify live URL.
+7. **Zip build** — Copy the final HTML, replace Supabase fetch with embedded JS array, test offline.
+8. **Release** — Package zip, attach to GitHub Release, tag v1.0.
 
 ---
 
-## 6. For New Developers
+## 7. Supabase Connection (for front-end wiring)
 
-- Start by reading the example scenario row above — that is the entire data contract.
+The Supabase project is `andredavisme's Project` in region `us-west-2`.
+
+To connect from the front end:
+
+```html
+<!-- Load Supabase JS client from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const { createClient } = supabase;
+  const client = createClient(
+    'YOUR_SUPABASE_PROJECT_URL',
+    'YOUR_SUPABASE_ANON_KEY'
+  );
+
+  async function loadScenarios(module) {
+    const { data, error } = await client
+      .from('scenarios')
+      .select('*')
+      .eq('module', module)
+      .order('difficulty');
+    return data;
+  }
+</script>
+```
+
+Retrieve the project URL and anon key from the Supabase dashboard under **Project Settings → API**.
+
+---
+
+## 8. For New Developers
+
+- Start by reading the example scenario row in Section 3 — that is the entire data contract.
 - You can add new scenarios without touching any JavaScript by inserting rows in Supabase.
 - The front-end code never hardcodes product names — everything comes from the data.
 - The zip build is a manual step: copy the final HTML, paste in the scenario array, test offline.
-
-Future sections of this guide will include:
-- Supabase setup walkthrough (project creation, table migration, API key)
-- Full annotated source code for the scenario player
-- GitHub Pages deployment steps
-- How to swap in real product data for internal use
+- To adapt this template for a real product line: replace the mock VoltEdge data with your own scenarios. The schema and UI require no changes.
 
 ---
 

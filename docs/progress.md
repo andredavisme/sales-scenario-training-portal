@@ -7,7 +7,7 @@ This living document tracks milestones and decisions for the training portal.
 - **Purpose:** Teach developers how to build a scenario-based sales training tool, and deliver a working internal version that sales teams can use immediately.
 - **Audience (template):** Developers — the repo is fully public and uses fictitious entities.
 - **Audience (zip):** Sales professionals — self-contained, no technical setup required.
-- **Mock scenario:** Meridian Industrial Supply reps learning to sell the VoltEdge product line (VFDs, breakers, power supplies, starters, controls). All company names, product names, and data are fictitious.
+- **Mock scenario:** Meridian Industrial Supply reps learning to sell the VoltEdge product line (VFDs, breakers, power supplies, starters, controls). All company names, product names, and data are fictitious and use generalized industry terminology — no real brand names.
 - **Core mechanic:** Short, realistic customer scenarios with multiple-choice answers and instant feedback.
 
 ## 2. Deliverables
@@ -30,12 +30,13 @@ This living document tracks milestones and decisions for the training portal.
 - [x] Create dedicated GitHub repo
 - [x] Define dual-deliverable plan (public template + internal zip)
 - [x] Establish mock scenario: Meridian Industrial Supply / VoltEdge
-- [ ] Finalize mock product catalog (VFDs, breakers, power supplies, starters, controls)
-- [ ] Write 5–10 seed scenarios per product category
+- [x] Finalize mock product catalog (VFDs, breakers, power supplies, starters, controls)
+- [x] Write seed scenarios — 18 scenarios across all 5 modules
 
 ### Deliverable A — Public Template
-- [ ] Design Supabase schema (`scenarios` table)
-- [ ] Apply migration and seed mock data
+- [x] Design Supabase schema (`scenarios` table)
+- [x] Apply migration to Supabase project
+- [x] Seed mock data (18 scenarios, all modules)
 - [ ] Build module picker UI (GitHub Pages)
 - [ ] Build scenario player with instant feedback
 - [ ] Wire Supabase client to front-end
@@ -54,10 +55,27 @@ This living document tracks milestones and decisions for the training portal.
 - [ ] Iterate on content and UX
 - [ ] Tag v1.0 release
 
-## 4. Current Status
+## 4. Session Log
 
-- Repo created, docs updated to reflect dual-deliverable plan
-- Next: finalize mock product catalog and write seed scenarios
+### Session 1 — 2026-05-15
+- Reframed project as dual-deliverable: public educational template + internal handoff zip
+- Established fictitious mock scenario (Meridian Industrial Supply / VoltEdge) — no real brand names, generalized industry terminology throughout
+- Updated README, progress, and build guide docs
+- Applied `scenarios` table migration to Supabase (`andredavisme's Project`, `us-west-2`)
+  - Schema: `id`, `module`, `prompt`, `choices` (jsonb), `answer`, `explanation`, `difficulty`, `created_at`
+  - RLS enabled with public read-only policy
+  - Index on `module` for fast filtering
+- Seeded 18 mock scenarios across all 5 modules:
+  - `drives` — 5 scenarios (VFD selection, torque control, energy savings, enclosure ratings, fault diagnosis)
+  - `breakers` — 4 scenarios (breaker selection, crossover criteria, motor protection sizing, full panels)
+  - `power_supplies` — 3 scenarios (24VDC sizing, temperature derating, DIN-rail form factor)
+  - `starters` — 3 scenarios (FVNR with overload, reversing starter, soft starter benefits)
+  - `controls` — 3 scenarios (3-wire control circuit, pilot light wiring, E-stop requirements)
+
+### Next Session — Recommended Starting Point
+- Build the GitHub Pages front-end: module picker UI + scenario player
+- Supabase project: `hhyhulqngdkwsxhymmcd` (us-west-2)
+- Anon key and project URL needed from Supabase dashboard for JS client wiring
 
 ---
 
