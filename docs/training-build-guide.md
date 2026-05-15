@@ -4,139 +4,147 @@ This guide explains how the training portal is built, step by step. It is writte
 
 ---
 
-## 1. Concept Overview
+## 1. What This Portal Does
 
-**The mock scenario:** Meridian Industrial Supply is a fictitious industrial distributor whose sales reps need to quickly learn a new product line — VoltEdge (VFDs, breakers, power supplies, starters, and controls). This mock scenario mirrors a real and common sales enablement challenge without exposing any proprietary data. All product names, company names, and catalog numbers are fictitious. All technical concepts use generalized industry terminology.
+This is a gamified sales training tool. Sales reps work through realistic customer scenarios to build product knowledge and selection confidence across six product categories sourced from EIA's Schneider Electric stocked product line.
 
 **The mechanic:**
-- A customer situation is described (e.g., "A customer needs a 5HP drive for a 460V conveyor application").
-- The rep picks the best answer from 3–4 choices.
-- Instant feedback explains why the answer is correct or incorrect.
-- Reps build pattern recognition across product categories without needing deep technical knowledge.
+- A customer situation is described (e.g., "A customer needs a VFD for a 480V centrifugal pump. What drive series applies?")
+- The rep picks the best answer from 2–4 choices
+- Instant feedback explains why the answer is correct or incorrect
+- Correct answers earn XP; completing a module earns a badge
+- A leaderboard tracks top performers by name (no login required)
+
+**Content source:** EIA-Schneider Stock Document Rev C (051426). All technical content, part numbers, and selection logic come directly from this document.
 
 ---
 
 ## 2. Architecture
 
-### Deliverable A — Public Educational Template
+### Deliverable A — Live Portal (GitHub Pages)
 
 ```
 Browser (GitHub Pages)
     └── Static HTML/CSS/JS
-            └── Supabase JS client
-                    └── Supabase (Postgres)
-                            └── scenarios table
+            └── Supabase JS client (CDN)
+                    └── Supabase Postgres
+                            └── sales_training schema
 ```
 
-- Front end: Static site hosted on GitHub Pages.
-- Back end: Supabase project (free tier is sufficient).
-- Scenarios are rows in a Postgres table, fetched at runtime via the Supabase JS client.
-- No build tool required — vanilla JS with a CDN-loaded Supabase client.
-
-### Deliverable B — Internal Handoff Zip
+### Deliverable B — Offline Zip
 
 ```
 index.html
-    └── <script> with embedded scenarioData = [ ... ]
+    └── <script> with embedded exerciseData = [ ... ]
 ```
 
-- No server, no CDN, no internet connection required.
-- All scenario data is a plain JS array embedded directly in the HTML file.
-- Opens in any modern browser from the local filesystem.
-- Ideal for distribution via email or shared drive.
+No server, no CDN, no internet required. Opens from the local filesystem in any modern browser.
 
 ---
 
 ## 3. Data Model
 
-### Schema (applied to Supabase)
+### Schema: `sales_training`
 
-The `scenarios` table lives in the `public` schema with RLS enabled and a public read-only policy.
+All tables live in the `sales_training` schema (not `public`) to isolate this project from other tables on the same Supabase instance.
 
-| Field | Type | Description |
+#### Content Tables (public read)
+
+| Table | Key Fields | Purpose |
 |---|---|---|
-| `id` | serial PK | Auto-incremented primary key |
-| `module` | text | Product category: `drives`, `breakers`, `power_supplies`, `starters`, `controls` |
-| `prompt` | text | The customer situation described to the rep |
-| `choices` | jsonb | Array of `{ label, text }` objects (A, B, C, D) |
-| `answer` | text | The correct choice label (e.g., `"B"`) |
-| `explanation` | text | Why that answer is correct (and why others are not) |
-| `difficulty` | text | `easy`, `medium`, or `hard` |
-| `created_at` | timestamptz | Auto-set on insert |
+| `modules` | `title`, `badge_name`, `badge_icon`, `order_index` | Top-level product categories |
+| `lessons` | `module_id`, `title`, `xp_reward`, `order_index` | Lessons within a module |
+| `exercises` | `lesson_id`, `exercise_type`, `prompt`, `points_value` | Individual questions |
+| `exercise_options` | `exercise_id`, `option_text`, `is_correct`, `feedback` | Answer choices |
 
-### Example Row
+#### Session Tables (public read + write)
 
-```json
-{
-  "module": "drives",
-  "prompt": "A customer needs a variable frequency drive for a 5HP, 460V, 3-phase conveyor motor. Which VoltEdge VFD is the correct fit?",
-  "choices": [
-    { "label": "A", "text": "VE-VFD-2HP-230V" },
-    { "label": "B", "text": "VE-VFD-5HP-460V" },
-    { "label": "C", "text": "VE-VFD-10HP-460V" },
-    { "label": "D", "text": "VE-STARTER-5HP-460V" }
-  ],
-  "answer": "B",
-  "explanation": "Match HP and voltage exactly. The VE-VFD-5HP-460V fits the application. Option C is oversized. Option D is a soft starter, not a VFD — it cannot vary motor speed.",
-  "difficulty": "easy"
-}
-```
+| Table | Key Fields | Purpose |
+|---|---|---|
+| `sessions` | `id` (client UUID), `last_active` | Anonymous play session |
+| `progress` | `session_id`, `lesson_id`, `score`, `xp_earned`, `completed` | Lesson completion tracking |
+| `responses` | `session_id`, `exercise_id`, `selected_option`, `is_correct` | Per-exercise answers |
+| `leaderboard` | `player_name`, `total_xp`, `badges_earned[]` | Named scores, no auth |
+
+### Exercise Types
+
+| Type | Description |
+|---|---|
+| `multiple_choice` | Pick the correct answer from options |
+| `true_false` | True or false statement |
+| `scenario_rank` | Rank options in the correct order |
+| `fill_in` | Complete the blank |
+
+### Gamification Fields
+- `exercises.points_value` — XP earned per correct answer
+- `lessons.xp_reward` — bonus XP on lesson completion
+- `modules.badge_name` + `modules.badge_icon` — awarded on module completion
+- `leaderboard.badges_earned` — text array of badge names earned
 
 ---
 
-## 4. Seeded Content Summary
+## 4. Content Map
 
-18 mock scenarios are seeded across all 5 modules. All content uses fictitious VoltEdge product names and generalized industry terminology.
+| # | Module | Badge | Lessons |
+|---|---|---|---|
+| 1 | Variable Frequency Drives | 🏆 Drive Selector | 6 seeded |
+| 2 | Miniature Circuit Breakers | ⚡ Circuit Breaker | Pending Seed-03 |
+| 3 | DC Power Supplies | 🔋 Power Pro | Pending Seed-04 |
+| 4 | Motor Starting & Protection | 🛡️ Motor Master | Pending Seed-05 |
+| 5 | Relays | 🔌 Relay Ace | Pending Seed-06 |
+| 6 | Pushbuttons & Indicators | 🔴 Panel Builder | Pending Seed-06 |
 
-| Module | Count | Topics Covered |
-|---|---|---|
-| `drives` | 5 | VFD sizing, torque control types, energy savings mode, enclosure ratings, overcurrent fault diagnosis |
-| `breakers` | 4 | Breaker selection, competitor crossover criteria, motor branch circuit sizing (250% rule), full panels |
-| `power_supplies` | 3 | 24VDC sizing with margin, temperature derating, DIN-rail form factor |
-| `starters` | 3 | FVNR with overload relay, reversing starter configuration, soft starter benefits |
-| `controls` | 3 | 3-wire control circuit wiring, pilot light connection, E-stop contact requirements |
+### VFD Module — Lessons (Seeded)
+1. VFD Fundamentals (20 XP)
+2. Constant Torque vs Variable Torque (20 XP)
+3. Enclosures & Communications (25 XP)
+4. ATV320 vs ATV630 — Choosing the Right Series (25 XP)
+5. Scenario: The Conveyor (40 XP)
+6. Scenario: The Pump Upgrade (40 XP)
 
 ---
 
-## 5. UI Components
+## 5. Seeding Approach
 
-### Module Picker
-- Displays a card or button for each product category.
-- Clicking a module loads scenarios for that category from Supabase (or embedded data in zip build).
+Content is seeded in discrete operations — one per module — so each can be reviewed and confirmed before proceeding.
 
-### Scenario Player
-- Shows the prompt and answer choices.
-- On selection: highlights correct/incorrect, shows explanation.
-- "Next" button advances to the next scenario.
-- Progress indicator shows position within the module.
+| Op | Migration | Scope |
+|---|---|---|
+| Seed-01 | 20260515_002 | All 6 modules + VFD lessons |
+| Seed-02 | 20260515_003 | VFD exercises + options |
+| Seed-03 | TBD | Circuit Breaker lessons + exercises |
+| Seed-04 | TBD | DC Power Supply lessons + exercises |
+| Seed-05 | TBD | Motor Starting & Protection lessons + exercises |
+| Seed-06 | TBD | Relays + Pushbuttons lessons + exercises |
 
-### Score Summary (optional)
-- At the end of a module, shows total correct / total attempted.
-- Encourages retry.
+**Rule:** Never edit a migration once it has been applied to production. If a seed needs correction, write a new migration.
 
 ---
 
 ## 6. Build Order
 
-1. **Schema** ✅ — `scenarios` table created in Supabase with RLS and public read policy.
-2. **Seed data** ✅ — 18 scenarios across all 5 modules inserted.
-3. **Scenario player** — Build the core UI loop (prompt → choices → feedback → next).
-4. **Module picker** — Build the entry screen.
-5. **Supabase wiring** — Connect the Supabase JS client (CDN) to fetch scenarios by module.
-6. **GitHub Pages deploy** — Enable Pages on `main`; verify live URL.
-7. **Zip build** — Copy the final HTML, replace Supabase fetch with embedded JS array, test offline.
-8. **Release** — Package zip, attach to GitHub Release, tag v1.0.
+1. **Schema** ✅ — `sales_training` schema migrated (20260515_001)
+2. **Seed-01** ✅ — 6 modules + VFD lessons (20260515_002)
+3. **Seed-02 through Seed-06** — remaining lessons and exercises
+4. **Module picker UI** — card per module, shows badge + XP available
+5. **Lesson player** — lesson list → exercise loop → XP reward screen
+6. **Exercise engine** — renders each exercise type (MC, T/F, rank, fill-in)
+7. **Leaderboard** — player names entry + score display
+8. **Supabase JS wiring** — connect CDN client to `sales_training` schema
+9. **GitHub Pages deploy** — enable Pages on `main`
+10. **Pixel animation CSS** — final visual pass (deferred)
+11. **Offline zip build** — embed exercise data, test offline, attach to Release
+12. **v1.0 tag**
 
 ---
 
-## 7. Supabase Connection (for front-end wiring)
+## 7. Supabase Connection
 
-The Supabase project is `andredavisme's Project` in region `us-west-2`.
+Project ID: `hhyhulqngdkwsxhymmcd`
 
 To connect from the front end:
 
 ```html
-<!-- Load Supabase JS client from CDN -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
   const { createClient } = supabase;
@@ -145,57 +153,84 @@ To connect from the front end:
     'YOUR_SUPABASE_ANON_KEY'
   );
 
-  async function loadScenarios(module) {
-    const { data, error } = await client
-      .from('scenarios')
-      .select('*')
-      .eq('module', module)
-      .order('difficulty');
+  // Query exercises for a lesson
+  async function loadExercises(lessonId) {
+    const { data } = await client
+      .schema('sales_training')
+      .from('exercises')
+      .select('*, exercise_options(*)')
+      .eq('lesson_id', lessonId)
+      .order('order_index');
     return data;
   }
 </script>
 ```
 
-Retrieve the project URL and anon key from the Supabase dashboard under **Project Settings → API**.
+> ⚠️ Use the anon/publishable key only. Never use the service role key in frontend code.
 
 ---
 
-## 8. Sandbox Environment Notes
+## 8. Session Management (No Auth)
 
-When using an AI assistant (Perplexity, ChatGPT, etc.) to generate and write files in a sandbox environment, the sandbox filesystem does **not** follow a standard Linux home directory layout.
+Because there is no authentication, sessions are managed with a client-generated UUID:
+
+```js
+// On app load
+let sessionId = sessionStorage.getItem('training_session_id');
+if (!sessionId) {
+  sessionId = crypto.randomUUID();
+  sessionStorage.setItem('training_session_id', sessionId);
+  // Insert into sales_training.sessions
+  await client.schema('sales_training').from('sessions').insert({ id: sessionId });
+}
+```
+
+> Note: `localStorage` is blocked in sandboxed iframes. Use `sessionStorage` for in-browser persistence, or in-memory variables if the portal is embedded.
+
+---
+
+## 9. Sandbox Environment Notes
+
+When using an AI assistant to generate and write files in a sandbox environment, the filesystem does **not** follow a standard Linux home directory layout.
 
 ### Known Failure Modes
 
 | Error | Cause |
 |---|---|
-| `/bin/bash: /home/user/...: No such file or directory` | `~` resolves to `/home/user/` — a path that doesn't exist in the sandbox |
-| `mkdir: cannot create directory '/root': Permission denied` | The sandbox user has no write access to `/root/` |
+| `/bin/bash: /home/user/...: No such file or directory` | `~` resolves to `/home/user/` which doesn't exist in this sandbox |
+| `mkdir: cannot create directory '/root': Permission denied` | Sandbox user has no write access to `/root/` |
 
 ### Fix — Confirm the Path First
-
-Begin every file-writing session with:
 
 ```bash
 echo $HOME && pwd
 ```
 
-This confirms the actual writable directory before any `mkdir` or file-write commands. Once the path is confirmed, all file generation and `share_files` delivery will work normally.
-
-### Why This Matters for This Project
-
-The front-end HTML for this portal will be generated in the sandbox and shared as a downloadable file. If the sandbox path is assumed rather than confirmed, the file generation step fails silently and the session must be restarted.
+Run this before any file-write commands. Once confirmed, all generation and `share_files` delivery will work normally.
 
 ---
 
-## 9. For New Developers
+## 10. Repo Naming & Privacy Rule
 
-- Start by reading the example scenario row in Section 3 — that is the entire data contract.
-- You can add new scenarios without touching any JavaScript by inserting rows in Supabase.
-- The front-end code never hardcodes product names — everything comes from the data.
-- The zip build is a manual step: copy the final HTML, paste in the scenario array, test offline.
-- To adapt this template for a real product line: replace the mock VoltEdge data with your own scenarios. The schema and UI require no changes.
-- Before generating files with an AI assistant, always run `echo $HOME && pwd` first (see Section 8).
+This repo uses a generic, privacy-safe name. **Never include client names, partner names, or proprietary identifiers in:**
+- The GitHub repo name or URL
+- Branch names
+- Commit messages
+- Public-facing documentation
+
+This rule applies to all Warrior X ecosystem repos handling client or partner work. See `warrior-x-docs/operations/training-manual.md` Chapter 9 for the full security policy.
 
 ---
 
-*As you work through the build, update this guide with what you learn. It should always reflect the current state of the project.*
+## 11. For New Developers
+
+- Read Section 3 (Data Model) first — that is the full data contract.
+- Add new exercises by inserting rows into `sales_training.exercises` and `sales_training.exercise_options` — no code changes needed.
+- All exercise types are rendered by the same engine; `exercise_type` controls which UI component is shown.
+- To adapt for a different product line: replace seed data. Schema and UI require no changes.
+- Before generating files with an AI assistant, always run `echo $HOME && pwd` first (Section 9).
+- Never commit secrets. API keys go in the Supabase Vault only.
+
+---
+
+*Update this guide whenever a new pattern is established, a schema change is made, or a build step is completed.*
